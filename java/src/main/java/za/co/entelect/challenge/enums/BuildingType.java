@@ -3,7 +3,8 @@ package za.co.entelect.challenge.enums;
 public enum BuildingType {
     DEFENSE(0),
     ATTACK(1),
-    ENERGY(2);
+    ENERGY(2),
+    TESLA(4);
 
     private int type;
 

@@ -10,5 +10,5 @@ public class GameDetails {
     public int mapHeight;
     public int roundIncomeEnergy;
     public HashMap<BuildingType, BuildingStats> buildingsStats = new HashMap<>();
-
+    public IronCurtainStats ironCurtainStats;
 }
