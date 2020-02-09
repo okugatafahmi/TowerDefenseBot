@@ -52,6 +52,23 @@ public class Bot {
     public String run() {
         String command = "";
 
+        // kalau tidak ada attack musuh di row, bangun energy
+        for (int i=0; i<gameHeight; ++i) {
+            List<Building> friendBuildingEnergy = getAllBuildingsInRow(playerType.A, i, 0);
+            List<Building> opponentBuildingAttack = getAllBuildingsInRow(playerType.B, i, 1);
+            
+            if (friendBuildingEnergy.size()==0 && opponentBuildingAttack.size()>0) {
+                if (canAffordBuilding(BuildingType.ENERGY)) {
+                    for (int x = gameWidth/2 - 1; x >=0; x--) {
+                        if (isCellEmpty(x, i)) {
+                           command = buildCommand(x,i,BuildingType.DEFENSE);
+                           return command;
+                        }
+                    }
+                }   
+            }
+        }
+
         // kalau musuh ada iron curtain, kita sikat iron curtain juga
         if (opponent.isIronCurtainActive){
             if (myself.energy>=gameDetails.ironCurtainStats.price){
@@ -114,6 +131,24 @@ public class Bot {
                 }
             }
         }
+
+        // bangun random apabila tidak ada yang terpenuhi
+        List<CellStateContainer> emptyCells = gameState.getGameMap().stream()
+            .filter(c -> c.getBuildings().size() == 0 && c.x < (gameWidth / 2))
+            .collect(Collectors.toList());
+
+        if (emptyCells.isEmpty()) {
+            return NOTHING_COMMAND;
+        }
+
+        CellStateContainer randomEmptyCell = getRandomElementOfList(emptyCells);
+        BuildingType randomBuildingType = getRandomElementOfList(Arrays.asList(BuildingType.values()));
+
+        if (!canAffordBuilding(randomBuildingType)) {
+            return doNothingCommand();
+        }
+
+        return randomBuildingType.buildCommand(randomEmptyCell.x, randomEmptyCell.y);
 
         return NOTHING_COMMAND;
     }
