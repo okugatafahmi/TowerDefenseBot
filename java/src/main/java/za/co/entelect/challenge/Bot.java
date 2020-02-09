@@ -11,9 +11,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 
-import static za.co.entelect.challenge.enums.BuildingType.ATTACK;
-import static za.co.entelect.challenge.enums.BuildingType.DEFENSE;
-
 public class Bot {
     private static final String NOTHING_COMMAND = "";
     private GameState gameState;
@@ -92,6 +89,32 @@ public class Bot {
             }
         }
 
+        // kalau punya cukup energi bangun tesla, langsung bangun tesla
+        if (canAffordBuilding(BuildingType.TESLA)){
+            for (int i=0; i<gameHeight; ++i){
+                // bangun tesla di baris yg attack musuh paling sedikit
+                int enemyAttackOnRow = getPlayerBuildingsInRow(PlayerType.B,i,BuildingType.ATTACK).size();
+
+                if (enemyAttackOnRow>0 && canAffordBuilding(BuildingType.TESLA)){
+                    command = buildFromFrontAtRow(BuildingType.TESLA,i);
+                    if (!command.equals("")){
+                        return command;
+                    }
+                }
+            }
+        }
+        // kalau ada defense di depan, pasang bangunan attack di belakang defense
+        for (int i = 0; i<gameHeight; ++i){
+            int myDefenseOnRow = getPlayerBuildingsInRow(PlayerType.A,i,BuildingType.DEFENSE).size();
+
+            if (myDefenseOnRow>0 && canAffordBuilding(BuildingType.ATTACK)){
+                command = buildFromFrontAtRow(BuildingType.ATTACK,i);
+                if (!command.equals("")){
+                    return command;
+                }
+            }
+        }
+
         return NOTHING_COMMAND;
     }
 
@@ -101,6 +124,15 @@ public class Bot {
 
     private String buildCommand(int x, int y, BuildingType buildingType) {
         return buildingType.buildCommand(x,y);
+    }
+
+    private String buildFromFrontAtRow(BuildingType bType, int y){
+        for (int x=gameWidth/2-1; x>=0; --x){
+            if (isCellEmpty(x, y)){
+                return buildCommand(x, y, bType);
+            }
+        }
+        return "";
     }
 
     private boolean isCellEmpty(int x, int y){
@@ -166,5 +198,10 @@ public class Bot {
         return allBuildings;
     }
 
+    private List<Building> getPlayerBuildingsInRow(PlayerType player, int y, BuildingType bType){
+        return buildings.stream()
+                        .filter(b->b.getY()==y)
+                        .collect(Collectors.toList());
+    }
     
 }

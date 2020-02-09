@@ -1,7 +1,6 @@
 package za.co.entelect.challenge.entities;
 
 import za.co.entelect.challenge.enums.BuildingType;
-import za.co.entelect.challenge.enums.PlayerType;
 
 public class Building extends Cell {
 
