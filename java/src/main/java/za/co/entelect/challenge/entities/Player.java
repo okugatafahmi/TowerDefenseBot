@@ -8,5 +8,6 @@ public class Player {
     public int health;
     public int hitsTaken;
     public int score;
+    public boolean ironCurtainAvailable;
     public boolean isIronCurtainActive;
 }

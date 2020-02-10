@@ -1,7 +1,7 @@
 {
-	"author": "John Doe",
-	"email": "john.doe@example.com",
-	"nickName": "James",
+	"author": "Okugata Farid Taufiq",
+	"email": "otasrit@gmail.com",
+	"nickName": "Macan",
 	"botLocation": "/target",
 	"botFileName": "java-sample-bot-jar-with-dependencies.jar",
 	"botLanguage": "java"
