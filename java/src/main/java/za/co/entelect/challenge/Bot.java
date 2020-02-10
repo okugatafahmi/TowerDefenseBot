@@ -10,6 +10,7 @@ import java.util.Random;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class Bot {
     private static final String NOTHING_COMMAND = "";
@@ -76,14 +77,49 @@ public class Bot {
                 else return NOTHING_COMMAND;
             }
         }
-       
-   
+        if (myself.energy-400>=gameDetails.buildingsStats.get(BuildingType.TESLA).price){
+            int y=99,maxEnemyAttack=-1;
+            for (int i = 1; i<gameHeight-1; ++i){
+                int enemyAttackOnRow = getPlayerBuildingsInRow(PlayerType.B, i, BuildingType.ATTACK).size();
+                if (enemyAttackOnRow>maxEnemyAttack){
+                    maxEnemyAttack = enemyAttackOnRow;
+                    y = i;
+                }
+            }
+
+            for (int j = 2; j<gameWidth/2-2; ++j){
+                if (isCellEmpty(j, y)){
+                    return buildCommand(j, y, BuildingType.TESLA);
+                }
+            }
+        }
+
+        // langsung bangun attack ketika sudah punya cukup energy
+        if (canAffordBuilding(BuildingType.ATTACK)){
+            int minEnemyBuilding = 99, y = 99;
+            for (int i=0; i<gameHeight; ++i){
+                int enemyBuilding = getPlayerBuildingsInRow(PlayerType.B, i).size();
+                if (enemyBuilding<minEnemyBuilding){
+                    minEnemyBuilding = enemyBuilding;
+                    y = i;
+                }
+            }
+            return buildFromFrontAtRow(BuildingType.ATTACK, y);
+        }
+
         // defense di row yang ada attack musuh nya
         for (int i = 0; i<gameHeight; ++i){
             List<Building> buildingPlayerAdefense = getAllBuildingsInRow(PlayerType.A, i,-1);
             List<Building> buildingPlayerBattack= getAllBuildingsInRow(PlayerType.B, i,1);
-
-            if (buildingPlayerAdefense.size()<2 && buildingPlayerBattack.size()>0){
+            // List<Missile> enemymMissiles = getPlayerMissiles(PlayerType.B, i);
+            
+            // if (buildingPlayerBattack.size()==1 && enemymMissiles.size()==1){
+            //     int x = enemymMissiles.get(0).getMissilePosWhen(gameDetails.buildingsStats.get(BuildingType.ATTACK).constructionTime);
+            //     if (isCellEmpty(x, i) && canAffordBuilding(BuildingType.ATTACK)){
+            //         return buildCommand(x, i, BuildingType.ATTACK);
+            //     }
+            // }
+            if (buildingPlayerAdefense.size()==0 && buildingPlayerBattack.size()>0){
                 if (canAffordBuilding(BuildingType.DEFENSE)){
                     command = buildFromFrontAtRow(BuildingType.DEFENSE,i);
                     if (!command.equals("")){
@@ -139,9 +175,6 @@ public class Bot {
             // int enemyAttackOnRow = getPlayerBuildingsInRow(PlayerType.B,i,BuildingType.ATTACK).size();
 
             if (myDefenseOnRow>0 && canAffordBuilding(BuildingType.ATTACK)){
-                if (myself.energy-500>=gameDetails.buildingsStats.get(BuildingType.TESLA).price){
-                    return buildFromBacktAtRow(BuildingType.TESLA, i);
-                }
                 command = buildFromBacktAtRow(BuildingType.ATTACK,i);
                 if (!command.equals("")){
                     return command;
@@ -293,4 +326,13 @@ public class Bot {
                         .collect(Collectors.toList());
     }
     
+    private List<Missile> getPlayerMissiles(PlayerType p, int y){
+        return missiles.stream()
+                        .filter(m->m.getPlayerType()==p && m.getY()==y)
+                        .collect(Collectors.toList());
+    }
+
+    private <T> List<T> getPlayerThingList(List<T> l, PlayerType pType, Predicate<T> p){
+        return l.stream().filter(p).collect(Collectors.toList());
+    }
 }
