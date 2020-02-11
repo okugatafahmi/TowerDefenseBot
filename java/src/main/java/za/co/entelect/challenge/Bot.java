@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 public class Bot {
     private static final String NOTHING_COMMAND = "";
-    private GameState gameState;
     private GameDetails gameDetails;
     private int gameWidth;
     private int gameHeight;
@@ -25,7 +24,6 @@ public class Bot {
      * @param gameState the game state
      **/
     public Bot(GameState gameState) {
-        this.gameState = gameState;
         gameDetails = gameState.getGameDetails();
         gameWidth = gameDetails.mapWidth;
         gameHeight = gameDetails.mapHeight;
@@ -58,7 +56,7 @@ public class Bot {
             // jika energi kurang, maka tunggu energi cukup di turn selanjutnya
             else return NOTHING_COMMAND;
         }
-        else if (canAffordActivatingShield() && myself.ironCurtainAvailable){
+        else if (canAffordActivatingShield()){
             return "7,7,5";
         }
 
@@ -81,7 +79,7 @@ public class Bot {
                 final int y = myTesla.get(i).getY();
                 int myDefenseOnRow = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.DEFENSE, PlayerType.A)).size();
 
-                if (myDefenseOnRow==0){
+                if (myDefenseOnRow==0 && isCellEmpty(gameWidth/2-1, y)){
                     return buildFromFrontAtRow(BuildingType.DEFENSE, y);
                 }
             }
@@ -89,23 +87,26 @@ public class Bot {
         
         // membangun tesla bila sudah punya banyak energy. Bila sudah bikin 1, bangun defense saja
         if (myself.energy>=gameDetails.buildingsStats.get(BuildingType.TESLA).price){
-            if (myTesla.size()==0){
+            if (myTesla.size()<2){
                 int y=99,maxEnemyAttack=-1;
-                for (int i = 1; i<gameHeight-1; ++i){
+                for (int i = 0; i<gameHeight; ++i){
                     final int y_temp = i;
                     int enemyAttackOnRow = getPlayerThingList(buildings, b-> b.isEqual(y_temp, BuildingType.ATTACK, PlayerType.B)).size();
                     int myBuildingsOnRow = getPlayerThingList(buildings, b-> b.isEqual(y_temp, PlayerType.A)).size();
-                    if (enemyAttackOnRow>maxEnemyAttack && myBuildingsOnRow<gameWidth/2-1){
+                    boolean isThereMyTesla = getPlayerThingList(buildings, b-> b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.A)).size()==1;
+                    if (enemyAttackOnRow>maxEnemyAttack && (myBuildingsOnRow<gameWidth/2-1) && !isThereMyTesla){
                         maxEnemyAttack = enemyAttackOnRow;
                         y = i;
                     }
                 }
 
-                for (int j = 3; j<gameWidth/2-2; ++j){
+                for (int j = gameWidth/2-3; j>=3; --j){
                     if (isCellEmpty(j, y)){
                         return buildCommand(j, y, BuildingType.TESLA);
                     }
                 }
+
+                return "4,"+y+",3"; // deconstruct bangunan karena akan dibangun tesla
             }
             else{ // bangun defense saja, dan pasti mampu membangun karena energy ada banyak
                 int maxEnemyAttack = -1, y = 99;
@@ -117,32 +118,46 @@ public class Bot {
                         y = i;
                     }
                 }
-                return buildFromFrontAtRow(BuildingType.DEFENSE, y);
+                if (maxEnemyAttack>0){
+                    return buildFromFrontAtRow(BuildingType.DEFENSE, y);
+                }
             }
         }
 
         // langsung bangun attack di baris yg bangunan musuh paling sedikit ketika sudah punya cukup energy
         if (canAffordBuilding(BuildingType.ATTACK)){
             int minEnemyBuilding = 99, y = 99;
-            for (int i=0; i<gameHeight; ++i){
+            for (int i=gameHeight-1; i>=0; --i){
                 final int y_temp=i;
                 int enemyBuilding = getPlayerThingList(buildings, b->b.isEqual(y_temp, PlayerType.B)).size();
-                if (enemyBuilding<minEnemyBuilding){
+                int myBuilding = getPlayerThingList(buildings, b->b.isEqual(y_temp, PlayerType.A)).size();
+                if (enemyBuilding<minEnemyBuilding && myBuilding!=gameWidth/2-1){  // tidak penuh
                     minEnemyBuilding = enemyBuilding;
                     y = i;
                 }
             }
-            return buildFromFrontAtRow(BuildingType.ATTACK, y);
+            final int y_temp = y;
+            int myAttack = getPlayerThingList(buildings, b->b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.A)).size(),
+                enemyAttack = getPlayerThingList(buildings, b->b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.B)).size();
+            if ((myAttack>=enemyAttack+2) && isCellEmpty(gameWidth/2-1, y)){
+                return buildFromFrontAtRow(BuildingType.DEFENSE, y);
+            }
+            else{
+                command = buildFromFrontAtRow(BuildingType.ATTACK, y);
+                if (!command.equals("")){ // mungkin saja barisnya sudah penuh
+                    return command;
+                }
+            }
         }
 
         // defense di row yang ada attack musuh nya
-        for (int i = 0; i<gameHeight; ++i){
-            final int y = i;
-            List<Building> buildingPlayerAdefense = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.DEFENSE, PlayerType.A));
-            List<Building> buildingPlayerBattack = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.ATTACK, PlayerType.B));
-            
-            if (buildingPlayerAdefense.size()==0 && buildingPlayerBattack.size()>0){
-                if (canAffordBuilding(BuildingType.DEFENSE)){
+        if (canAffordBuilding(BuildingType.DEFENSE)){
+            for (int i = 0; i<gameHeight; ++i){
+                final int y = i;
+                List<Building> buildingPlayerAdefense = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.DEFENSE, PlayerType.A));
+                List<Building> buildingPlayerBattack = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.ATTACK, PlayerType.B));
+                
+                if (buildingPlayerAdefense.size()==0 && buildingPlayerBattack.size()>0){   
                     command = buildFromFrontAtRow(BuildingType.DEFENSE,i);
                     if (!command.equals("")){
                         return command;
@@ -151,6 +166,21 @@ public class Bot {
             }
         }
 
+        // kalau ada defense di depan, pasang bangunan attack di paling belakang
+        if (canAffordBuilding(BuildingType.ATTACK)){
+            for (int i = 0; i<gameHeight; ++i){
+                final int y = i;
+                int myDefenseOnRow = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.DEFENSE, PlayerType.A)).size();
+
+                if (myDefenseOnRow>0){
+                    command = buildFromBacktAtRow(BuildingType.ATTACK,i);
+                    if (!command.equals("")){
+                        return command;
+                    }
+                }
+            }
+        }
+        
         // kalau tidak ada attack musuh di row, bangun energy
         for (int i=0; i<gameHeight; ++i) {
             final int y = i;
@@ -176,19 +206,21 @@ public class Bot {
             }
         }
 
-        // kalau ada defense di depan, pasang bangunan attack di paling belakang
-        for (int i = 0; i<gameHeight; ++i){
-            final int y = i;
-            int myDefenseOnRow = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.DEFENSE, PlayerType.A)).size();
+        // kalau bisa bangun energy, bangun di baris yang attack kita lebih banyak atau tidak ada attack musuh
+        if (canAffordBuilding(BuildingType.ENERGY)){
+            for (int i=gameHeight-1; i>=0; --i){
+                final int y = i;
+                int myAttack = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.ATTACK, PlayerType.A)).size();
+                int enemymyAttack = getPlayerThingList(buildings, b->b.isEqual(y, BuildingType.ATTACK, PlayerType.B)).size();
 
-            if (myDefenseOnRow>0 && canAffordBuilding(BuildingType.ATTACK)){
-                command = buildFromBacktAtRow(BuildingType.ATTACK,i);
-                if (!command.equals("")){
-                    return command;
+                if (myAttack>enemymyAttack || enemymyAttack == 0){
+                    command = buildFromBacktAtRow(BuildingType.ENERGY,i);
+                    if (!command.equals("")){
+                        return command;
+                    }
                 }
             }
         }
-
         return NOTHING_COMMAND;
     }
 
@@ -199,7 +231,7 @@ public class Bot {
 
     // mengembalikan true apabila kita dapat mengaktifkan ironcurtain
     private boolean canAffordActivatingShield() {
-        return myself.energy >= gameDetails.ironCurtainStats.price;
+        return myself.energy >= gameDetails.ironCurtainStats.price && myself.ironCurtainAvailable;
     }
 
     // mengembalikan string command untuk membangung bangunan
