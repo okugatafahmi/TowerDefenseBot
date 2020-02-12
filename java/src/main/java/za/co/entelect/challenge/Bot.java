@@ -62,14 +62,16 @@ public class Bot {
 
         // kalau musuh ada tesla, kita buat iron curtain
         List<Building> buildingPlayerBtesla = getPlayerThingList(buildings,b->b.isEqual(BuildingType.TESLA, PlayerType.B))
-                                             .stream().filter(b->b.constructionTimeLeft<=gameDetails.ironCurtainStats.activeRounds)
-                                             .collect(Collectors.toList());
+                                                .stream().filter(b->b.constructionTimeLeft<=gameDetails.ironCurtainStats.activeRounds)
+                                                .collect(Collectors.toList());
         if (buildingPlayerBtesla.size()>0){
             if (canAffordActivatingShield()){
                 command = "7,7,5";
                 return command;
             }   
-            else return NOTHING_COMMAND;
+            else if (myself.energy<90) {
+                return NOTHING_COMMAND;
+            }
         }
 
         // membangun defensive wall jika kita punya tesla
@@ -131,7 +133,7 @@ public class Bot {
                 final int y_temp=i;
                 int enemyBuilding = getPlayerThingList(buildings, b->b.isEqual(y_temp, PlayerType.B)).size();
                 int myBuilding = getPlayerThingList(buildings, b->b.isEqual(y_temp, PlayerType.A)).size();
-                if (enemyBuilding<minEnemyBuilding && myBuilding!=gameWidth/2-1){  // tidak penuh
+                if (enemyBuilding<minEnemyBuilding && myBuilding!=gameWidth/2-1){  // tidak penuh-1
                     minEnemyBuilding = enemyBuilding;
                     y = i;
                 }
