@@ -133,21 +133,20 @@ public class Bot {
                 final int y_temp=i;
                 int enemyBuilding = getPlayerThingList(buildings, b->b.isEqual(y_temp, PlayerType.B)).size();
                 int myBuilding = getPlayerThingList(buildings, b->b.isEqual(y_temp, PlayerType.A)).size();
-                if (enemyBuilding<minEnemyBuilding && myBuilding!=gameWidth/2-1){  // tidak penuh-1
+                if (enemyBuilding<minEnemyBuilding && myBuilding<gameWidth/2-1){  // tidak penuh-1
                     minEnemyBuilding = enemyBuilding;
                     y = i;
                 }
             }
-            final int y_temp = y;
-            int myAttack = getPlayerThingList(buildings, b->b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.A)).size(),
-                enemyAttack = getPlayerThingList(buildings, b->b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.B)).size();
-            if ((myAttack>=enemyAttack+2) && isCellEmpty(gameWidth/2-1, y)){
-                return buildFromFrontAtRow(BuildingType.DEFENSE, y);
-            }
-            else{
-                command = buildFromFrontAtRow(BuildingType.ATTACK, y);
-                if (!command.equals("")){ // mungkin saja barisnya sudah penuh
-                    return command;
+            if (y!=99){
+                final int y_temp = y;
+                int myAttack = getPlayerThingList(buildings, b->b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.A)).size(),
+                    enemyAttack = getPlayerThingList(buildings, b->b.isEqual(y_temp, BuildingType.ATTACK,PlayerType.B)).size();
+                if ((myAttack>=enemyAttack+4) && isCellEmpty(gameWidth/2-1, y)){
+                    return buildFromFrontAtRow(BuildingType.DEFENSE, y);
+                }
+                else {
+                    return buildFromFrontAtRow(BuildingType.ATTACK, y);
                 }
             }
         }
